@@ -33,6 +33,21 @@ Environment variables (all optional):
 
 Set **Settings → Public site URL** to your public domain so copied customer links point to the right place (not `localhost`).
 
+### Live deployment
+
+- **Frontend:** <https://rsmatic.github.io/pixprint/> — GitHub Pages, deployed by `.github/workflows/pages.yml` on every push to `main` that touches `client/`.
+- **API:** <https://pixprint.54-227-48-13.sslip.io> — Docker container `pixprint-api` on the EC2 host (`ec2-user@54.227.48.13`).
+  It sits behind orderko's Caddy container (which owns ports 80/443), on the `orderko_default` network.
+  The site block is `~/eaglemark/caddy/pixprint.caddy`, imported from `~/eaglemark/caddy/Caddyfile`.
+- **Secrets:** `~/pixprint/.env` on the server (admin password, JWT secret). **Data:** Docker volume `deploy_pixprint-data`.
+
+Update the API after pushing changes:
+
+```bash
+ssh -i ~/rsmatic.pem ec2-user@54.227.48.13
+cd ~/pixprint/app && git pull && sudo docker compose -f deploy/docker-compose.yml up -d --build
+```
+
 ## Features
 
 **Customer side (no login)**

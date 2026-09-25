@@ -205,6 +205,9 @@ const DEFAULT_SETTINGS = {
   tax_rate: '0',
   default_maintenance_days: '90',
   public_base_url: '',
+  notify_emails: '',
+  email_staff_new_request: '1',
+  email_customer_confirmation: '1',
   jwt_secret: crypto.randomBytes(32).toString('hex'),
 };
 for (const [key, value] of Object.entries(DEFAULT_SETTINGS)) {

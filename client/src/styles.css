@@ -1543,3 +1543,14 @@ button.stat:hover {
     align-items: flex-start;
   }
 }
+
+.block-check {
+  display: flex;
+  margin-bottom: 8px;
+}
+.test-email {
+  margin-top: 12px;
+}
+.test-email input {
+  max-width: 280px;
+}

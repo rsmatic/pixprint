@@ -1,8 +1,9 @@
 import { Router } from 'express';
 import { db, getSettings } from '../db.js';
 import { requireRole } from '../auth.js';
-import { OPEN_STATUSES, TICKET_SELECT, withTotals } from '../tickets.js';
+import { HttpError, OPEN_STATUSES, TICKET_SELECT, withTotals } from '../tickets.js';
 import { withMaintenance } from './printers.js';
+import { emailStatus, sendMail } from '../mailer.js';
 
 const router = Router();
 
@@ -94,12 +95,33 @@ router.get('/schedule', (req, res) => {
 router.get('/settings', (req, res) => res.json(getSettings()));
 
 router.put('/settings', requireRole('admin'), (req, res) => {
-  const allowed = ['shop_name', 'shop_phone', 'shop_email', 'shop_address', 'currency', 'tax_rate', 'default_maintenance_days', 'public_base_url'];
+  const allowed = [
+    'shop_name', 'shop_phone', 'shop_email', 'shop_address', 'currency', 'tax_rate', 'default_maintenance_days', 'public_base_url',
+    'notify_emails', 'email_staff_new_request', 'email_customer_confirmation',
+  ];
   const upd = db.prepare('INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value');
   db.transaction(() => {
     for (const k of allowed) if (k in req.body) upd.run(k, String(req.body[k] ?? '').trim());
   })();
   res.json(getSettings());
+});
+
+router.get('/email/status', requireRole('admin'), (req, res) => res.json(emailStatus()));
+
+router.post('/email/test', requireRole('admin'), async (req, res) => {
+  const to = String(req.body.to || '').trim();
+  if (!/^[^@\s]+@[^@\s]+$/.test(to)) throw new HttpError(400, 'Enter a valid email address');
+  try {
+    await sendMail({
+      to,
+      subject: 'PixPrint test email',
+      text: 'Email sending works. New service requests will now send notifications.',
+      html: '<p>Email sending works. New service requests will now send notifications.</p>',
+    });
+  } catch (err) {
+    throw new HttpError(502, `Could not send: ${err.message}`);
+  }
+  res.json({ ok: true });
 });
 
 export default router;

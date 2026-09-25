@@ -2,9 +2,11 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api.js';
 import { money } from '../lib.js';
+import { useApi } from '../hooks.js';
 import { ErrorBox, Field, useShopSettings } from '../components/ui.jsx';
 
-const FIELDS = ['shop_name', 'shop_phone', 'shop_email', 'shop_address', 'currency', 'tax_rate', 'default_maintenance_days', 'public_base_url'];
+const FIELDS = ['shop_name', 'shop_phone', 'shop_email', 'shop_address', 'currency', 'tax_rate', 'default_maintenance_days', 'public_base_url',
+  'notify_emails', 'email_staff_new_request', 'email_customer_confirmation'];
 
 export default function Settings() {
   const settings = useShopSettings();
@@ -15,7 +17,7 @@ export default function Settings() {
   useEffect(() => {
     setF(Object.fromEntries(FIELDS.map((k) => [k, settings[k] ?? ''])));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [settings.shop_name, settings.currency, settings.public_base_url]);
+  }, [settings.shop_name, settings.currency, settings.public_base_url, settings.notify_emails]);
 
   const set = (k) => (e) => setF((s) => ({ ...s, [k]: e.target.value }));
 
@@ -90,6 +92,7 @@ export default function Settings() {
             </Field>
           </div>
         </section>
+        <EmailSection f={f} setF={setF} set={set} />
         <div className="row gap end">
           <Link to="/request" target="_blank" rel="noreferrer" className="btn btn-ghost">
             Preview request form ↗
@@ -100,5 +103,59 @@ export default function Settings() {
         </div>
       </form>
     </div>
+  );
+}
+
+function EmailSection({ f, setF, set }) {
+  const status = useApi('/email/status').data;
+  const [testTo, setTestTo] = useState('');
+  const [testMsg, setTestMsg] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const toggle = (k) => (e) => setF((s) => ({ ...s, [k]: e.target.checked ? '1' : '0' }));
+
+  return (
+    <section>
+      <h2 className="section-title">Email notifications</h2>
+      {status && !status.configured && (
+        <div className="alert alert-warn">
+          Email sending is not set up on the server yet. Add SMTP settings to the server's environment to turn it on.
+        </div>
+      )}
+      {status?.configured && <p className="muted small">Sending from <strong>{status.from}</strong>.</p>}
+      <Field label="Staff notification emails" hint="Where new online requests are sent. Separate several addresses with commas.">
+        <input value={f.notify_emails || ''} onChange={set('notify_emails')} placeholder="service@yourshop.com, owner@yourshop.com" />
+      </Field>
+      <label className="check block-check">
+        <input type="checkbox" checked={f.email_staff_new_request !== '0'} onChange={toggle('email_staff_new_request')} /> Email staff when a customer submits a request
+      </label>
+      <label className="check block-check">
+        <input type="checkbox" checked={f.email_customer_confirmation !== '0'} onChange={toggle('email_customer_confirmation')} /> Send the customer a confirmation with their ticket number and tracking link
+      </label>
+      {status?.configured && (
+        <div className="row gap wrap test-email">
+          <input type="email" value={testTo} onChange={(e) => setTestTo(e.target.value)} placeholder="you@example.com" />
+          <button
+            type="button"
+            className="btn"
+            disabled={busy || !testTo}
+            onClick={async () => {
+              setBusy(true);
+              setTestMsg(null);
+              try {
+                await api('/email/test', { method: 'POST', body: { to: testTo } });
+                setTestMsg({ ok: true, text: `Test email sent to ${testTo}.` });
+              } catch (err) {
+                setTestMsg({ ok: false, text: err.message });
+              } finally {
+                setBusy(false);
+              }
+            }}
+          >
+            Send test email
+          </button>
+        </div>
+      )}
+      {testMsg && <div className={`alert ${testMsg.ok ? 'alert-ok' : 'alert-error'}`}>{testMsg.text}</div>}
+    </section>
   );
 }

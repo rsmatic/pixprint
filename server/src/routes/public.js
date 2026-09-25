@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { db, getSettings } from '../db.js';
 import { HttpError, STATUS_LABELS, TICKET_SELECT, withTotals, addEvent, createTicket } from '../tickets.js';
+import { notifyNewRequest } from '../mailer.js';
 
 const router = Router();
 
@@ -81,6 +82,8 @@ router.post('/requests', rateLimit(10, 60 * 60 * 1000), (req, res) => {
   );
   const t = db.prepare('SELECT code, token FROM tickets WHERE id = ?').get(id);
   res.status(201).json(t);
+  // send after responding so a slow mail server never delays the customer
+  notifyNewRequest(id).catch((err) => console.error('notifyNewRequest failed:', err));
 });
 
 router.get('/track/:token', (req, res) => {

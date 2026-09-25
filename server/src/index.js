@@ -16,7 +16,10 @@ import miscRoutes from './routes/misc.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
-app.set('trust proxy', 'loopback');
+// which proxies may set X-Forwarded-For (client IPs feed the public rate limiter);
+// behind Caddy in another container use TRUST_PROXY=uniquelocal
+const trustProxy = process.env.TRUST_PROXY || 'loopback';
+app.set('trust proxy', /^\d+$/.test(trustProxy) ? Number(trustProxy) : trustProxy);
 // CORS_ORIGIN: comma-separated list of allowed frontend origins (e.g. https://rsmatic.github.io); unset = allow all
 const corsOrigins = process.env.CORS_ORIGIN?.split(',').map((s) => s.trim()).filter(Boolean);
 app.use(cors(corsOrigins?.length ? { origin: corsOrigins } : undefined));

@@ -32,7 +32,7 @@ jobs:
         env:
           VITE_BASE: /pixprint/
           # the Express API on EC2 (Caddy terminates HTTPS)
-          VITE_API_URL: ${{ vars.API_URL || 'https://54-227-48-13.sslip.io' }}
+          VITE_API_URL: ${{ vars.API_URL || 'https://pixprint.54-227-48-13.sslip.io' }}
       # GitHub Pages has no SPA rewrites: serve the app for unknown paths like /pixprint/track/<token>
       - run: cp client/dist/index.html client/dist/404.html
       - uses: actions/upload-pages-artifact@v3

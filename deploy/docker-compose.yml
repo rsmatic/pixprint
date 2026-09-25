@@ -1,0 +1,26 @@
+# PixPrint API on the shared EC2 host. It joins orderko's Docker network so orderko's
+# Caddy (which owns ports 80/443) can reverse-proxy to it by container name; no host
+# ports are published. Secrets live in ~/pixprint/.env on the server, never in git.
+#
+#   cd ~/pixprint/app && sudo docker compose -f deploy/docker-compose.yml --env-file ~/pixprint/.env up -d --build
+services:
+  pixprint-api:
+    build: ../server
+    container_name: pixprint-api
+    restart: unless-stopped
+    env_file: /home/ec2-user/pixprint/.env
+    environment:
+      CORS_ORIGIN: https://rsmatic.github.io
+      TRUST_PROXY: uniquelocal
+    volumes:
+      - pixprint-data:/data
+    networks:
+      - orderko_default
+    mem_limit: 192m
+
+volumes:
+  pixprint-data:
+
+networks:
+  orderko_default:
+    external: true
